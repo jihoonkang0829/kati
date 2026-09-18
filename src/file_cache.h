@@ -16,6 +16,7 @@
 #define FILE_CACHE_H_
 
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "file.h"
@@ -23,7 +24,7 @@
 class MakefileCacheManager {
  public:
   const Makefile& ReadMakefile(const std::string& filename);
-  void GetAllFilenames(std::unordered_set<std::string>* out);
+  void GetAllFilenames(std::unordered_map<std::string, double>* out) const;
   void AddExtraFileDep(std::string_view dep);
 
   static MakefileCacheManager& Get();
@@ -33,7 +34,7 @@ class MakefileCacheManager {
   MakefileCacheManager(const MakefileCacheManager&) = delete;
   MakefileCacheManager(MakefileCacheManager&&) = delete;
   std::unordered_map<std::string, Makefile> cache_;
-  std::unordered_set<std::string> extra_file_deps_;
+  std::unordered_map<std::string, double> extra_file_deps_;
 };
 
 #endif  // FILE_CACHE_H_

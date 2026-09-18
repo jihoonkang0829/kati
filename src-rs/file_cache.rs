@@ -15,9 +15,10 @@ limitations under the License.
 */
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     ffi::{OsStr, OsString},
     sync::{Arc, LazyLock},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::Result;
@@ -28,13 +29,13 @@ use crate::file::Makefile;
 static CACHE: LazyLock<Mutex<MakefileCacheManager>> = LazyLock::new(|| {
     Mutex::new(MakefileCacheManager {
         cache: HashMap::new(),
-        extra_file_deps: HashSet::new(),
+        extra_file_deps: HashMap::new(),
     })
 });
 
 struct MakefileCacheManager {
     cache: HashMap<OsString, Option<Arc<Makefile>>>,
-    extra_file_deps: HashSet<OsString>,
+    extra_file_deps: HashMap<OsString, SystemTime>,
 }
 
 impl MakefileCacheManager {
@@ -54,17 +55,25 @@ pub fn get_makefile(filename: &OsStr) -> Result<Option<Arc<Makefile>>> {
 }
 
 pub fn add_extra_file_dep(filename: OsString) {
-    CACHE.lock().extra_file_deps.insert(filename);
+    let mtime = std::fs::metadata(&filename)
+        .and_then(|m| m.modified())
+        .unwrap_or(UNIX_EPOCH);
+    CACHE.lock().extra_file_deps.insert(filename, mtime);
 }
 
-pub fn get_all_filenames() -> HashSet<OsString> {
+pub fn get_all_filenames() -> HashMap<OsString, SystemTime> {
     let manager = CACHE.lock();
-    let mut ret = HashSet::new();
-    for p in manager.cache.keys() {
-        ret.insert(p.clone());
+    let mut ret = HashMap::new();
+    for (p, mk) in &manager.cache {
+        let mtime = mk
+            .as_ref()
+            .map(|m| m.mtime)
+            .or_else(|| std::fs::metadata(p).and_then(|m| m.modified()).ok())
+            .unwrap_or(UNIX_EPOCH);
+        ret.insert(p.clone(), mtime);
     }
-    for f in &manager.extra_file_deps {
-        ret.insert(f.clone());
+    for (f, mtime) in &manager.extra_file_deps {
+        ret.insert(f.clone(), *mtime);
     }
     ret
 }

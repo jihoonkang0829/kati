@@ -95,9 +95,17 @@ int stamp_dump_main(int argc, char* argv[]) {
   //
 
   {
-    auto files = LoadVecString(fp);
-    if (dump_files) {
-      for (const auto& f : files) {
+    int num_files = LoadInt(fp);
+    if (num_files < 0)
+      ERROR("Incomplete stamp file");
+    for (int i = 0; i < num_files; i++) {
+      std::string f;
+      if (!LoadString(fp, &f))
+        ERROR("Incomplete stamp file");
+      double ts;
+      if (fread(&ts, sizeof(ts), 1, fp) != 1)
+        ERROR("Incomplete stamp file");
+      if (dump_files) {
         printf("%s\n", f.c_str());
       }
     }

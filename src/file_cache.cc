@@ -18,6 +18,7 @@
 
 #include "file.h"
 #include "file_cache.h"
+#include "fileutil.h"
 
 const Makefile& MakefileCacheManager::ReadMakefile(
     const std::string& filename) {
@@ -29,15 +30,16 @@ const Makefile& MakefileCacheManager::ReadMakefile(
 }
 
 void MakefileCacheManager::GetAllFilenames(
-    std::unordered_set<std::string>* out) {
+    std::unordered_map<std::string, double>* out) const {
   for (const auto& p : cache_)
-    out->insert(p.first);
+    (*out)[p.first] = p.second.mtime();
   for (const auto& f : extra_file_deps_)
-    out->insert(f);
+    (*out)[f.first] = f.second;
 }
 
 void MakefileCacheManager::AddExtraFileDep(std::string_view dep) {
-  extra_file_deps_.emplace(dep);
+  std::string s(dep);
+  extra_file_deps_[s] = GetTimestamp(s);
 }
 
 MakefileCacheManager& MakefileCacheManager::Get() {

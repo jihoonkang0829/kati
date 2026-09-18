@@ -34,10 +34,11 @@ class Makefile {
   std::vector<Stmt*>* mutable_stmts() { return &stmts_; }
 
   bool Exists() const { return exists_; }
+  double mtime() const { return mtime_; }
 
  private:
   std::string buf_;
-  uint64_t mtime_;
+  double mtime_;
   std::string filename_;
   std::vector<Stmt*> stmts_;
   bool exists_;

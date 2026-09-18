@@ -39,7 +39,7 @@ Makefile::Makefile(const std::string& filename)
   }
 
   size_t len = st.st_size;
-  mtime_ = st.st_mtime;
+  mtime_ = GetTimestampFromStat(st);
   buf_.resize(len);
   exists_ = true;
   size_t remaining = len;

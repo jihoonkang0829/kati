@@ -674,12 +674,17 @@ class NinjaGenerator {
     size_t r = fwrite(&start_time_, sizeof(start_time_), 1, fp);
     CHECK(r == 1);
 
-    std::unordered_set<std::string> makefiles;
+    std::unordered_map<std::string, double> makefiles;
     MakefileCacheManager::Get().GetAllFilenames(&makefiles);
     DumpInt(fp, makefiles.size() + 1);
     DumpString(fp, kati_binary_);
-    for (const std::string& makefile : makefiles) {
+    double kati_binary_ts = GetTimestamp(kati_binary_);
+    r = fwrite(&kati_binary_ts, sizeof(kati_binary_ts), 1, fp);
+    CHECK(r == 1);
+    for (const auto& [makefile, mtime] : makefiles) {
       DumpString(fp, makefile);
+      r = fwrite(&mtime, sizeof(mtime), 1, fp);
+      CHECK(r == 1);
     }
 
     DumpInt(fp, Evaluator::used_undefined_vars().size());

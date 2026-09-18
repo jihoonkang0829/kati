@@ -160,10 +160,15 @@ class StampChecker {
     int num_files = LOAD_INT(fp);
     for (int i = 0; i < num_files; i++) {
       LOAD_STRING(fp, &s);
+      double recorded_ts;
+      if (fread(&recorded_ts, sizeof(recorded_ts), 1, fp) != 1) {
+        fprintf(stderr, "incomplete kati_stamp, regenerating...\n");
+        RETURN_TRUE;
+      }
       double ts = GetTimestamp(s);
       // GetTimestamp returns < 0 when there's an error reading the file, like
-      // when its been removed.
-      if (gen_time < ts || ts < 0) {
+      // when its been removed. Allow 1e-6s tolerance for float representation.
+      if (recorded_ts + 1e-6 < ts || ts < 0) {
         if (g_flags.regen_ignoring_kati_binary) {
           if (s == GetExecutablePath()) {
             fprintf(stderr, "%s was modified, ignored.\n", s.c_str());
@@ -176,7 +181,7 @@ class StampChecker {
           continue;
         }
         if (g_flags.dump_kati_stamp)
-          printf("file %s: dirty (%f)\n", s.c_str(), ts);
+          printf("file %s: dirty (%f > %f)\n", s.c_str(), ts, recorded_ts);
         else
           fprintf(stderr, "%s was modified, regenerating...\n", s.c_str());
         RETURN_TRUE;

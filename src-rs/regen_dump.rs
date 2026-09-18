@@ -85,9 +85,11 @@ fn inner(
     //
 
     {
-        let files = load_vec_string(fp)?;
-        if dump_files {
-            for file in files {
+        let num_files = load_usize(fp)?;
+        for _ in 0..num_files {
+            let file = load_string(fp)?;
+            let _ts = load_systemtime(fp)?;
+            if dump_files {
                 println!("{}", file.display());
             }
         }

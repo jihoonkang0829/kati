@@ -148,10 +148,15 @@ impl StampChecker {
             println!("Generated time: {:?}", self.gen_time);
         }
 
-        let files = load!(load_vec_string(fp));
-        for s in files {
+        let num_files = load!(load_usize(fp));
+        for _ in 0..num_files {
+            let s = load!(load_string(fp));
+            let recorded_ts = load!(load_systemtime(fp));
             let ts = std::fs::metadata(&s).and_then(|m| m.modified());
-            if ts.as_ref().is_ok_and(|ts| gen_time >= *ts) {
+            if ts
+                .as_ref()
+                .is_ok_and(|ts| recorded_ts + std::time::Duration::from_micros(1) >= *ts)
+            {
                 if FLAGS.dump_kati_stamp {
                     println!("file {s:?}: clean ({:?})", ts.unwrap())
                 }
@@ -162,12 +167,12 @@ impl StampChecker {
                 }
                 if should_ignore_dirty(s.as_bytes()) {
                     if FLAGS.regen_debug {
-                        println!("file {s:?}: ignored ({:?})", ts.unwrap());
+                        println!("file {s:?}: ignored ({:?})", ts.ok());
                     }
                     continue;
                 }
                 if FLAGS.dump_kati_stamp {
-                    println!("file {s:?}: dirty ({:?})", ts.unwrap());
+                    println!("file {s:?}: dirty ({:?} > {:?})", ts, recorded_ts);
                 } else {
                     eprintln!("{} was modified, regenerating...", s.to_string_lossy());
                 }

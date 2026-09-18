@@ -743,8 +743,13 @@ impl<'a> NinjaGenerator<'a> {
             let makefiles = file_cache::get_all_filenames();
             dump_usize(&mut out, makefiles.len() + 1)?;
             dump_string(&mut out, self.kati_binary.as_bytes())?;
-            for makefile in makefiles {
+            let kati_binary_ts = std::fs::metadata(&self.kati_binary)
+                .and_then(|m| m.modified())
+                .unwrap_or(self.start_time);
+            dump_systemtime(&mut out, &kati_binary_ts)?;
+            for (makefile, mtime) in makefiles {
                 dump_string(&mut out, makefile.as_bytes())?;
+                dump_systemtime(&mut out, &mtime)?;
             }
 
             dump_usize(&mut out, Evaluator::used_undefined_vars().len())?;

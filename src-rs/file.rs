@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::{ffi::OsStr, os::unix::ffi::OsStrExt, sync::Arc};
+use std::{ffi::OsStr, io::Read, os::unix::ffi::OsStrExt, sync::Arc, time::SystemTime};
 
 use anyhow::Result;
 use bytes::Bytes;
@@ -28,20 +28,29 @@ use crate::{
 
 pub struct Makefile {
     pub filename: Symbol,
+    pub mtime: SystemTime,
     pub stmts: Arc<Mutex<Vec<Stmt>>>,
 }
 
 impl Makefile {
     pub fn from_file(filename: &OsStr) -> Result<Option<Arc<Makefile>>> {
-        if !std::fs::exists(filename)? {
-            return Ok(None);
-        }
-
-        let buf = Bytes::from(std::fs::read(filename)?);
+        let mut file = match std::fs::File::open(filename) {
+            Ok(f) => f,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let mtime = file.metadata()?.modified()?;
+        let mut buf = Vec::new();
+        file.read_to_end(&mut buf)?;
+        let buf = Bytes::from(buf);
 
         let filename = intern(filename.as_bytes().to_vec());
         let stmts = parse_file(&buf, filename)?;
 
-        Ok(Some(Arc::new(Makefile { filename, stmts })))
+        Ok(Some(Arc::new(Makefile {
+            filename,
+            mtime,
+            stmts,
+        })))
     }
 }
